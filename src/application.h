@@ -17,13 +17,18 @@ namespace dtr {
         WindowData* m_WindowData = nullptr;
 
         GLFWwindow* m_Window = nullptr;
-        wgpu::Queue m_Queue;
         GraphicsDevice* m_Device = nullptr;
         wgpu::Surface m_WGPUSurface;
+        wgpu::TextureFormat m_SurfaceFormat = wgpu::TextureFormat::Undefined;
+        wgpu::Queue m_Queue;
+        
+        wgpu::RenderPipeline m_Pipeline;
 
         std::vector<WGPUFeatureName> m_Features;
         wgpu::AdapterProperties m_Properties; 
 
+        wgpu::Buffer m_VertexBuffer;
+        uint32_t m_VertexCount;
     public:
         bool Initialize();
 
@@ -37,6 +42,9 @@ namespace dtr {
         void stopRunning() { m_IsRunning = false; }
     
         wgpu::TextureView GetNextSurfaceTextureView();
+
+        void InitializeRenderPipeline();
+        void InitializeBuffers();
     };
 
 }

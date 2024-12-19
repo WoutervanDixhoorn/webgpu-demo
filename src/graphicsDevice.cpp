@@ -7,11 +7,13 @@ namespace dtr {
 
 	bool GraphicsDevice::Initialize(wgpu::Adapter adapter, GLFWwindow* window)
 	{	
+		wgpu::RequiredLimits requiredLimits = GetRequiredLimits(adapter);
+
 		wgpu::DeviceDescriptor deviceDesc = {};
 		deviceDesc.setDefault();
 		deviceDesc.label = "DouterGPU";
 		deviceDesc.requiredFeatureCount = 0;
-		deviceDesc.requiredLimits = nullptr;
+		deviceDesc.requiredLimits = &requiredLimits;
 		deviceDesc.defaultQueue.nextInChain = nullptr;
 		deviceDesc.defaultQueue.label = "The default queue";
 		deviceDesc.deviceLostCallback = [](WGPUDeviceLostReason reason, const char* message, void* /* pUserData */) {
@@ -31,115 +33,16 @@ namespace dtr {
 		};
 		m_Device.setUncapturedErrorCallback(uncapturedErrorCallback);
 
-		//if (!InitializeRenderPipeline(adapter)) {
-		//	std::cout << "Failed initializing render pipeline" << std::endl;
-		//}
-
 		InspectDevice();
 
 		return true;
 	}
 
-	//bool GraphicsDevice::InitializeRenderPipeline(wgpu::Adapter adapter)
-	//{
-	//	Shader shader("triangle.wgsl");
-
-	//	wgpu::ShaderModuleDescriptor shaderDesc;
-	//	shaderDesc.hintCount = 0;
-	//	shaderDesc.hints = nullptr;
-
-	//	wgpu::ShaderModuleWGSLDescriptor shaderCodeDesc;
-	//	shaderCodeDesc.chain.next = nullptr;
-	//	shaderCodeDesc.chain.sType = wgpu::SType::ShaderModuleWGSLDescriptor;
-	//	shaderCodeDesc.code = shader.GetShaderSource();
-
-	//	shaderDesc.nextInChain = &shaderCodeDesc.chain;
-
-	//	wgpu::ShaderModule shaderModule = m_Device.createShaderModule(shaderDesc);
-
-	//	wgpu::RenderPipelineDescriptor pipelineDesc;
-	//	pipelineDesc.setDefault();
-
-	//	pipelineDesc.vertex.bufferCount = 0;
-	//	pipelineDesc.vertex.buffers = nullptr;
-	//	pipelineDesc.vertex.module = shaderModule;
-	//	pipelineDesc.vertex.entryPoint = "vs_main";
-	//	pipelineDesc.vertex.constantCount = 0;
-	//	pipelineDesc.vertex.constants = nullptr;
-
-	//	pipelineDesc.primitive.topology = wgpu::PrimitiveTopology::TriangleList;
-	//	pipelineDesc.primitive.stripIndexFormat = wgpu::IndexFormat::Undefined;
-	//	pipelineDesc.primitive.frontFace = wgpu::FrontFace::CCW;
-	//	pipelineDesc.primitive.cullMode = wgpu::CullMode::None;
-
-	//	wgpu::BlendState blendState;
-	//	blendState.color.srcFactor = wgpu::BlendFactor::SrcAlpha;
-	//	blendState.color.dstFactor = wgpu::BlendFactor::OneMinusSrcAlpha;
-	//	blendState.color.operation = wgpu::BlendOperation::Add;
-	//	blendState.alpha.srcFactor = wgpu::BlendFactor::Zero;
-	//	blendState.alpha.dstFactor = wgpu::BlendFactor::One;
-	//	blendState.alpha.operation = wgpu::BlendOperation::Add;
-
-	//	wgpu::ColorTargetState colorTarget;
-	//	colorTarget.format = m_WGPUSurface.getPreferredFormat(adapter);
-	//	colorTarget.blend = &blendState;
-	//	colorTarget.writeMask = wgpu::ColorWriteMask::All;
-
-	//	wgpu::FragmentState fragmentState;
-	//	fragmentState.module = shaderModule;
-	//	fragmentState.entryPoint = "fs_main";
-	//	fragmentState.constantCount = 0;
-	//	fragmentState.constants = nullptr;
-	//	fragmentState.targetCount = 1;
-	//	fragmentState.targets = &colorTarget;
-
-	//	pipelineDesc.fragment = &fragmentState;
-	//	pipelineDesc.depthStencil = nullptr;
-
-	//	pipelineDesc.multisample.count = 1;
-	//	pipelineDesc.multisample.mask = ~0u;
-	//	pipelineDesc.multisample.alphaToCoverageEnabled = false;
-
-	//	pipelineDesc.layout = nullptr;
-
-	//	m_RenderPipeline = m_Device.createRenderPipeline(pipelineDesc);
-
-	//	shaderModule.release();
-
-	//	return true;
-	//}
-
 	bool GraphicsDevice::Dispose()
 	{
-		//m_RenderPipeline.release();
 		m_Device.release();
 		return true;
 	}
-
-	//wgpu::TextureView GraphicsDevice::GetNextSurfaceTextureView()
-	//{
-	//	wgpu::SurfaceTexture surfaceTexture;
-	//	m_WGPUSurface.getCurrentTexture(&surfaceTexture);
-	//	wgpu::Texture texture = surfaceTexture.texture;
-	//	if (surfaceTexture.status != wgpu::SurfaceGetCurrentTextureStatus::Success) {
-	//		return nullptr;
-	//	}
-
-	//	wgpu::TextureViewDescriptor viewDescriptor;
-	//	viewDescriptor.setDefault();
-	//	viewDescriptor.label = "Surface texture view";
-	//	viewDescriptor.format = texture.getFormat();
-	//	viewDescriptor.dimension = WGPUTextureViewDimension_2D;
-	//	viewDescriptor.baseMipLevel = 0;
-	//	viewDescriptor.mipLevelCount = 1;
-	//	viewDescriptor.baseArrayLayer = 0;
-	//	viewDescriptor.arrayLayerCount = 1;
-	//	viewDescriptor.aspect = wgpu::TextureAspect::All;
-
-	//	WGPUTextureView targetView = texture.createView(viewDescriptor);
-
-	//	return targetView;
-	//}
 
 	void GraphicsDevice::InspectDevice()
 	{
@@ -167,5 +70,26 @@ namespace dtr {
 			std::cout << " - maxTextureDimension3D: " << limits.limits.maxTextureDimension3D << std::endl;
 			std::cout << " - maxTextureArrayLayers: " << limits.limits.maxTextureArrayLayers << std::endl;
 		}
+	}
+
+	wgpu::RequiredLimits GraphicsDevice::GetRequiredLimits(wgpu::Adapter adapter) const
+	{
+		wgpu::SupportedLimits supportedLimits;
+		adapter.getLimits(&supportedLimits);
+
+		wgpu::RequiredLimits requiredLimits = wgpu::Default;
+
+		//Only the minimum required limits to run this application
+		requiredLimits.limits.maxVertexAttributes = 2;
+		requiredLimits.limits.maxVertexBuffers = 1;
+		requiredLimits.limits.maxBufferSize = 6 * 5 * sizeof(float);
+		requiredLimits.limits.maxVertexBufferArrayStride = 5 * sizeof(float);
+		// There is a maximum of 3 float forwarded from vertex to fragment shader
+		requiredLimits.limits.maxInterStageShaderComponents = 3;
+
+		requiredLimits.limits.minUniformBufferOffsetAlignment = supportedLimits.limits.minUniformBufferOffsetAlignment;
+		requiredLimits.limits.minStorageBufferOffsetAlignment = supportedLimits.limits.minStorageBufferOffsetAlignment;
+
+		return requiredLimits;
 	}
 }

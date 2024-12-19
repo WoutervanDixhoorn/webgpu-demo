@@ -22,6 +22,8 @@ namespace dtr {
 
 		void Poll() { m_Device.poll(false); }
 
+	private:
+		wgpu::RequiredLimits GetRequiredLimits(wgpu::Adapter adapter) const;
 	};
 
 }

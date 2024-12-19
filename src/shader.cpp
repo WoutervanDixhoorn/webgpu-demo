@@ -3,6 +3,7 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
+#include <cassert>
 
 namespace dtr {
 
@@ -22,10 +23,10 @@ namespace dtr {
 				std::getline(shaderFile, line);
 
 				shaderSource << line << "\n";
-				std::cout << line << std::endl;
 			}
 		} else {
 			std::cout << "Failed loading shader file " << m_FileName << std::endl;
+			assert(false);
 		}
 
 		std::cout << "Succesfully loaded " << m_FileName << std::endl;

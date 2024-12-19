@@ -3,6 +3,7 @@
 #include <glfw3webgpu.h>
 
 #include "application.h"
+#include "shader.h"
 
 #define WINDOW_WIDTH 1280
 #define WINDOW_HEIGHT 720
@@ -51,7 +52,7 @@ namespace dtr {
 
 		//Get the adapter
 		wgpu::RequestAdapterOptions requestAdapterOpt = {};
-		requestAdapterOpt.powerPreference = WGPUPowerPreference_LowPower;
+		requestAdapterOpt.powerPreference = WGPUPowerPreference_HighPerformance;
 		requestAdapterOpt.compatibleSurface = m_WGPUSurface;
 		requestAdapterOpt.setDefault();
 
@@ -59,7 +60,6 @@ namespace dtr {
 
 		instance.release();
 
-		//Also using old api, wbgpu.hpp wont work
 		//Get adapter features
 		size_t featureCount = wgpuAdapterEnumerateFeatures(adapter, nullptr);
 		m_Features.resize(featureCount);
@@ -79,8 +79,8 @@ namespace dtr {
 		};
 		wgpuQueueOnSubmittedWorkDone(m_Queue, onQueueWorkDone, nullptr /* pUserData */);
 
-		wgpu::TextureFormat surfaceFormat = wgpuSurfaceGetPreferredFormat(m_WGPUSurface, adapter);
-		if (surfaceFormat == WGPUTextureFormat_Undefined) {
+		m_SurfaceFormat = wgpuSurfaceGetPreferredFormat(m_WGPUSurface, adapter);
+		if (m_SurfaceFormat == WGPUTextureFormat_Undefined) {
 			std::cerr << "Invalid surface format!" << std::endl;
 			return false;
 		}
@@ -89,7 +89,7 @@ namespace dtr {
 		config.setDefault();
 		config.width = WINDOW_WIDTH;
 		config.height = WINDOW_HEIGHT;
-		config.format = surfaceFormat;
+		config.format = m_SurfaceFormat;
 		config.usage = WGPUTextureUsage_RenderAttachment;
 		config.device = m_Device->GetNativeDevice();
 		config.presentMode = WGPUPresentMode_Fifo;
@@ -100,11 +100,117 @@ namespace dtr {
 
 		adapter.release();
 
+		InitializeBuffers();
+		InitializeRenderPipeline();
+
 		return true;
+	}
+
+	void Application::InitializeRenderPipeline()
+	{
+		Shader shader("triangle.wgsl");
+
+		wgpu::ShaderModuleDescriptor shaderDesc = {};
+		shaderDesc.hintCount = 0;
+		shaderDesc.hints = nullptr;
+
+		wgpu::ShaderModuleWGSLDescriptor shaderCodeDesc;
+		shaderCodeDesc.chain.next = nullptr;
+		shaderCodeDesc.chain.sType = wgpu::SType::ShaderModuleWGSLDescriptor;
+		shaderCodeDesc.code = shader.GetShaderSource();
+
+		shaderDesc.nextInChain = &shaderCodeDesc.chain;
+		wgpu::ShaderModule shaderModule = m_Device->GetNativeDevice().createShaderModule(shaderDesc);
+
+		std::vector<wgpu::VertexAttribute> vertexAttribs(2);
+
+		vertexAttribs[0].shaderLocation = 0;
+		vertexAttribs[0].format = wgpu::VertexFormat::Float32x2;
+		vertexAttribs[0].offset = 0;
+
+		vertexAttribs[1].shaderLocation = 1;
+		vertexAttribs[1].format = wgpu::VertexFormat::Float32x3;
+		vertexAttribs[1].offset = 2 * sizeof(float);
+
+		wgpu::VertexBufferLayout vertexBufferLayout;
+		vertexBufferLayout.attributeCount = static_cast<uint32_t>(vertexAttribs.size());
+		vertexBufferLayout.attributes = vertexAttribs.data();
+		vertexBufferLayout.arrayStride = 5 * sizeof(float);
+		vertexBufferLayout.stepMode = wgpu::VertexStepMode::Vertex;
+
+		wgpu::RenderPipelineDescriptor pipelineDesc = {};
+		pipelineDesc.vertex.bufferCount = 1;
+		pipelineDesc.vertex.buffers = &vertexBufferLayout;
+		pipelineDesc.vertex.module = shaderModule;
+		pipelineDesc.vertex.entryPoint = "vs_main";
+		pipelineDesc.vertex.constantCount = 0;
+		pipelineDesc.vertex.constants = nullptr;
+
+		pipelineDesc.primitive.topology = wgpu::PrimitiveTopology::TriangleList;
+		pipelineDesc.primitive.stripIndexFormat = wgpu::IndexFormat::Undefined;
+		pipelineDesc.primitive.frontFace = wgpu::FrontFace::CCW;
+		pipelineDesc.primitive.cullMode = wgpu::CullMode::None;
+
+		wgpu::FragmentState fragmentState;
+		fragmentState.module = shaderModule;
+		fragmentState.entryPoint = "fs_main";
+		fragmentState.constantCount = 0;
+		fragmentState.constants = nullptr;
+
+		wgpu::BlendState blendState;
+		blendState.color.srcFactor = wgpu::BlendFactor::SrcAlpha;
+		blendState.color.dstFactor = wgpu::BlendFactor::OneMinusSrcAlpha;
+		blendState.color.operation = wgpu::BlendOperation::Add;
+
+		wgpu::ColorTargetState colorTarget;
+		colorTarget.format = m_SurfaceFormat;
+		colorTarget.blend = &blendState;
+		colorTarget.writeMask = wgpu::ColorWriteMask::All;
+
+		fragmentState.targetCount = 1;
+		fragmentState.targets = &colorTarget;
+		pipelineDesc.fragment = &fragmentState;
+
+		pipelineDesc.depthStencil = nullptr;
+
+		pipelineDesc.multisample.count = 1;
+		pipelineDesc.multisample.mask = ~0u;
+		pipelineDesc.multisample.alphaToCoverageEnabled = false;
+
+		pipelineDesc.layout = nullptr;
+
+		m_Pipeline = m_Device->GetNativeDevice().createRenderPipeline(pipelineDesc);
+	}
+
+	void Application::InitializeBuffers()
+	{
+		std::vector<float> vertexData = {
+			-0.5, -0.5, 1.0, 0.0, 0.0,
+			+0.5, -0.5, 0.0, 1.0, 0.0,
+			+0.0,   +0.5, 0.0, 0.0, 1.0,
+
+			-0.55f, -0.5, 1.0, 1.0, 0.0,
+			-0.05f, +0.5, 1.0, 0.0, 1.0,
+			-0.55f, +0.5, 0.0, 1.0, 1.0
+		};
+
+		m_VertexCount = static_cast<uint32_t>(vertexData.size() / 5);
+
+		wgpu::BufferDescriptor bufferDesc;
+		bufferDesc.size = vertexData.size() * sizeof(float);
+		bufferDesc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Vertex; // Vertex usage here!
+		bufferDesc.mappedAtCreation = false;
+		m_VertexBuffer = m_Device->GetNativeDevice().createBuffer(bufferDesc);
+
+		m_Queue.writeBuffer(m_VertexBuffer, 0, vertexData.data(), bufferDesc.size);
 	}
 
 	void Application::Terminate()
 	{
+		m_VertexBuffer.release();
+
+		m_Pipeline.release();
+
 		m_WGPUSurface.unconfigure();
 		m_WGPUSurface.release();
 
@@ -146,6 +252,11 @@ namespace dtr {
 		wgpu::RenderPassEncoder renderPass = encoder.beginRenderPass(renderPassDesc);
 
 		//Do something with the renderpass
+		renderPass.setPipeline(m_Pipeline);
+		// Draw 1 instance of a 3-vertices shape
+		renderPass.setVertexBuffer(0, m_VertexBuffer, 0, m_VertexBuffer.getSize());
+		// We use the `vertexCount` variable instead of hard-coding the vertex count
+		renderPass.draw(m_VertexCount, 1, 0, 0);
 
 		renderPass.end();
 		renderPass.release();
@@ -159,7 +270,7 @@ namespace dtr {
 		m_Queue.submit(1, &command);
 		command.release();
 
-		wgpuDevicePoll(m_Device->GetNativeDevice(), false, nullptr);
+		m_Device->GetNativeDevice().poll(false);
 
 		//Release target view and present surface after
 		targetView.release();
