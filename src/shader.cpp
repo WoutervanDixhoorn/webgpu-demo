@@ -34,4 +34,18 @@ namespace dtr {
 		return shaderSource.str();
 	}
 
+	wgpu::ShaderModule Shader::GetShaderModule(wgpu::Device device) const
+	{
+		wgpu::ShaderModuleWGSLDescriptor shaderCodeDesc;
+		shaderCodeDesc.chain.next = nullptr;
+		shaderCodeDesc.chain.sType = wgpu::SType::ShaderModuleWGSLDescriptor;
+		shaderCodeDesc.code = GetShaderSource();
+
+		wgpu::ShaderModuleDescriptor shaderDesc = {};
+		shaderDesc.hintCount = 0;
+		shaderDesc.hints = nullptr;
+		shaderDesc.nextInChain = &shaderCodeDesc.chain;
+		return device.createShaderModule(shaderDesc);;
+	}
+
 }

@@ -28,7 +28,8 @@ namespace dtr {
         wgpu::AdapterProperties m_Properties; 
 
         wgpu::Buffer m_VertexBuffer;
-        uint32_t m_VertexCount;
+        wgpu::Buffer m_IndexBuffer;
+        uint32_t m_IndexCount;
     public:
         bool Initialize();
 

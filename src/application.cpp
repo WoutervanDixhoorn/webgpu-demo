@@ -4,6 +4,7 @@
 
 #include "application.h"
 #include "shader.h"
+#include "utility.h"
 
 #define WINDOW_WIDTH 1280
 #define WINDOW_HEIGHT 720
@@ -75,13 +76,13 @@ namespace dtr {
 
 		m_Queue = m_Device->GetDeviceQueue();
 		auto onQueueWorkDone = [](WGPUQueueWorkDoneStatus status, void* /* pUserData */) {
-			std::cout << "Queued work finished with status: " << status << std::endl;
+			std::cout << "Queued work finished with status: " << status << "\n";
 		};
 		wgpuQueueOnSubmittedWorkDone(m_Queue, onQueueWorkDone, nullptr /* pUserData */);
 
 		m_SurfaceFormat = wgpuSurfaceGetPreferredFormat(m_WGPUSurface, adapter);
 		if (m_SurfaceFormat == WGPUTextureFormat_Undefined) {
-			std::cerr << "Invalid surface format!" << std::endl;
+			std::cerr << "Invalid surface format!" << "\n";
 			return false;
 		}
 
@@ -108,19 +109,8 @@ namespace dtr {
 
 	void Application::InitializeRenderPipeline()
 	{
-		Shader shader("triangle.wgsl");
-
-		wgpu::ShaderModuleDescriptor shaderDesc = {};
-		shaderDesc.hintCount = 0;
-		shaderDesc.hints = nullptr;
-
-		wgpu::ShaderModuleWGSLDescriptor shaderCodeDesc;
-		shaderCodeDesc.chain.next = nullptr;
-		shaderCodeDesc.chain.sType = wgpu::SType::ShaderModuleWGSLDescriptor;
-		shaderCodeDesc.code = shader.GetShaderSource();
-
-		shaderDesc.nextInChain = &shaderCodeDesc.chain;
-		wgpu::ShaderModule shaderModule = m_Device->GetNativeDevice().createShaderModule(shaderDesc);
+		Shader shader("assets/shaders/triangle.wgsl");
+		wgpu::ShaderModule shaderModule = shader.GetShaderModule(m_Device->GetNativeDevice());
 
 		std::vector<wgpu::VertexAttribute> vertexAttribs(2);
 
@@ -185,16 +175,20 @@ namespace dtr {
 	void Application::InitializeBuffers()
 	{
 		std::vector<float> vertexData = {
-			-0.5, -0.5, 1.0, 0.0, 0.0,
-			+0.5, -0.5, 0.0, 1.0, 0.0,
-			+0.0,   +0.5, 0.0, 0.0, 1.0,
-
-			-0.55f, -0.5, 1.0, 1.0, 0.0,
-			-0.05f, +0.5, 1.0, 0.0, 1.0,
-			-0.55f, +0.5, 0.0, 1.0, 1.0
+			-0.5, -0.5,   1.0, 0.0, 0.0,
+			+0.5, -0.5,   0.0, 1.0, 0.0,
+			+0.5, +0.5,   0.0, 0.0, 1.0,
+			-0.5, +0.5,   1.0, 1.0, 0.0
 		};
 
-		m_VertexCount = static_cast<uint32_t>(vertexData.size() / 5);
+		std::vector<uint16_t> indexData = {
+			0, 1, 2, 
+			0, 2, 3 
+		};
+
+		LoadGeometry("assets/webgpu.txt", vertexData, indexData);
+
+		m_IndexCount = static_cast<uint32_t>(indexData.size());
 
 		wgpu::BufferDescriptor bufferDesc;
 		bufferDesc.size = vertexData.size() * sizeof(float);
@@ -203,6 +197,13 @@ namespace dtr {
 		m_VertexBuffer = m_Device->GetNativeDevice().createBuffer(bufferDesc);
 
 		m_Queue.writeBuffer(m_VertexBuffer, 0, vertexData.data(), bufferDesc.size);
+
+		bufferDesc.size = indexData.size() * sizeof(uint16_t);
+		bufferDesc.size = (bufferDesc.size + 3) & ~3; // round up to the next multiple of 4
+		bufferDesc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Index; // Vertex usage here!
+		m_IndexBuffer = m_Device->GetNativeDevice().createBuffer(bufferDesc);
+
+		m_Queue.writeBuffer(m_IndexBuffer, 0, indexData.data(), bufferDesc.size);
 	}
 
 	void Application::Terminate()
@@ -241,7 +242,7 @@ namespace dtr {
 		renderPassColorAttachment.resolveTarget = nullptr;
 		renderPassColorAttachment.loadOp = WGPULoadOp_Clear;
 		renderPassColorAttachment.storeOp = WGPUStoreOp_Store;
-		renderPassColorAttachment.clearValue = WGPUColor{ 0.9, 0.1, 0.2, 1.0 };
+		renderPassColorAttachment.clearValue = WGPUColor{ 0.05, 0.05, 0.05, 1.0 };
 
 		wgpu::RenderPassDescriptor renderPassDesc = {};
 		renderPassDesc.setDefault();
@@ -255,8 +256,9 @@ namespace dtr {
 		renderPass.setPipeline(m_Pipeline);
 		// Draw 1 instance of a 3-vertices shape
 		renderPass.setVertexBuffer(0, m_VertexBuffer, 0, m_VertexBuffer.getSize());
+		renderPass.setIndexBuffer(m_IndexBuffer, wgpu::IndexFormat::Uint16, 0, m_IndexBuffer.getSize());
 		// We use the `vertexCount` variable instead of hard-coding the vertex count
-		renderPass.draw(m_VertexCount, 1, 0, 0);
+		renderPass.drawIndexed(m_IndexCount, 1, 0, 0, 0);
 
 		renderPass.end();
 		renderPass.release();

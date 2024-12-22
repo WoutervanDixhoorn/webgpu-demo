@@ -14,6 +14,7 @@ namespace dtr {
 		Shader(const char* fileName);
 
 		const char* GetShaderSource() const { return m_ShaderSource.c_str(); }
+		wgpu::ShaderModule GetShaderModule(wgpu::Device device) const;
 
 	private:
 		std::string LoadShaderFromFile();

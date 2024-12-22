@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.26)
 
 set(CMAKE_CXX_STANDARD 20)
 
@@ -33,4 +33,10 @@ target_link_libraries("${CMAKE_PROJECT_NAME}" PRIVATE webgpu glfw glfw3webgpu)
 
 target_copy_webgpu_binaries("${CMAKE_PROJECT_NAME}")
 
-configure_file("${CMAKE_SOURCE_DIR}/assets/shaders/triangle.wgsl" "triangle.wgsl" COPYONLY)
+add_custom_target(copy_assets
+    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/" 
+    "${CMAKE_BINARY_DIR}/assets/"
+    COMMENT "Copying assets"
+)
+add_dependencies(${CMAKE_PROJECT_NAME} copy_assets)
