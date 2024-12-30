@@ -103,12 +103,31 @@ namespace dtr {
 
 		InitializeBuffers();
 		InitializeRenderPipeline();
+		InitializeBindGroups();
 
 		return true;
 	}
 
-	void Application::InitializeRenderPipeline()
+	void Application::InitializeBindGroups()
 	{
+		//Binding 1
+		wgpu::BindGroupEntry binding{};
+		binding.binding = 0; //1
+		binding.buffer = m_UniformBuffer; //Object!?
+		binding.offset = 0;
+		binding.size = sizeof(MyUniformData);
+
+
+		//Create bind group
+		wgpu::BindGroupDescriptor bindGroupDesc{};
+		bindGroupDesc.layout = m_BindGroupLayout;
+		bindGroupDesc.entryCount = 1;
+		bindGroupDesc.entries = &binding;
+		m_BindGroup = m_Device->GetNativeDevice().createBindGroup(bindGroupDesc);
+	}
+
+	void Application::InitializeRenderPipeline()
+	{	
 		Shader shader("assets/shaders/triangle.wgsl");
 		wgpu::ShaderModule shaderModule = shader.GetShaderModule(m_Device->GetNativeDevice());
 
@@ -167,7 +186,26 @@ namespace dtr {
 		pipelineDesc.multisample.mask = ~0u;
 		pipelineDesc.multisample.alphaToCoverageEnabled = false;
 
-		pipelineDesc.layout = nullptr;
+		//Describe the uniforms, each entry is a uniform buffer?!
+		wgpu::BindGroupLayoutEntry bindGroupLayoutEntry = wgpu::Default;
+		bindGroupLayoutEntry.binding = 0; // @binding(0) attribute in shader //1
+		bindGroupLayoutEntry.visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
+		bindGroupLayoutEntry.buffer.type = wgpu::BufferBindingType::Uniform;
+		bindGroupLayoutEntry.buffer.minBindingSize = sizeof(MyUniformData); //2
+
+		//Define the layout with the uniform entries!
+		wgpu::BindGroupLayoutDescriptor bindGroupLayoutDesc{};
+		bindGroupLayoutDesc.entryCount = 1;
+		bindGroupLayoutDesc.entries = &bindGroupLayoutEntry;
+		m_BindGroupLayout = m_Device->GetNativeDevice().createBindGroupLayout(bindGroupLayoutDesc);
+
+		//Create pipelineLayout using the BindGroupLayouts.
+		wgpu::PipelineLayoutDescriptor pipelineLayoutDesc{};
+		pipelineLayoutDesc.bindGroupLayoutCount = 1;
+		pipelineLayoutDesc.bindGroupLayouts = (WGPUBindGroupLayout*)&m_BindGroupLayout;
+		m_PipelineLayout = m_Device->GetNativeDevice().createPipelineLayout(pipelineLayoutDesc);
+
+		pipelineDesc.layout = m_PipelineLayout;
 
 		m_Pipeline = m_Device->GetNativeDevice().createRenderPipeline(pipelineDesc);
 	}
@@ -204,12 +242,26 @@ namespace dtr {
 		m_IndexBuffer = m_Device->GetNativeDevice().createBuffer(bufferDesc);
 
 		m_Queue.writeBuffer(m_IndexBuffer, 0, indexData.data(), bufferDesc.size);
+
+		//Init uniform buffers
+		bufferDesc.size = sizeof(MyUniformData);
+		bufferDesc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform;
+		m_UniformBuffer = m_Device->GetNativeDevice().createBuffer(bufferDesc);
+
+		MyUniformData uniforms;
+		uniforms.time = 1.0f;
+		uniforms.color = { 0.0f, 1.0f, 0.4f, 1.0f };
+		m_Queue.writeBuffer(m_UniformBuffer, 0, &uniforms, sizeof(float));
 	}
 
 	void Application::Terminate()
 	{
+		m_UniformBuffer.release();
 		m_VertexBuffer.release();
+		m_IndexBuffer.release();
 
+		m_BindGroupLayout.release();
+		m_PipelineLayout.release();
 		m_Pipeline.release();
 
 		m_WGPUSurface.unconfigure();
@@ -257,20 +309,32 @@ namespace dtr {
 		// Draw 1 instance of a 3-vertices shape
 		renderPass.setVertexBuffer(0, m_VertexBuffer, 0, m_VertexBuffer.getSize());
 		renderPass.setIndexBuffer(m_IndexBuffer, wgpu::IndexFormat::Uint16, 0, m_IndexBuffer.getSize());
-		// We use the `vertexCount` variable instead of hard-coding the vertex count
+
+		renderPass.setBindGroup(0, m_BindGroup, 0, nullptr);
+
+		//Write value to buffer!
+		float time = static_cast<float>(glfwGetTime());
+		// Upload only the time, whichever its order in the struct
+		m_Queue.writeBuffer(m_UniformBuffer, offsetof(MyUniformData, time), &time, sizeof(float));
+
+		float color[4] = { 0.0f, 1.0f, 0.4f, 1.0f };;
+		// Upload only the time, whichever its order in the struct
+		m_Queue.writeBuffer(m_UniformBuffer, offsetof(MyUniformData, color), &color, sizeof(MyUniformData::color));
+
 		renderPass.drawIndexed(m_IndexCount, 1, 0, 0, 0);
 
 		renderPass.end();
 		renderPass.release();
-
+		
 		wgpu::CommandBufferDescriptor cmdBufferDescriptor = {};
 		cmdBufferDescriptor.setDefault();
 		cmdBufferDescriptor.label = "Command buffer";
 		wgpu::CommandBuffer command = encoder.finish(cmdBufferDescriptor);
+
 		encoder.release();
 
 		m_Queue.submit(1, &command);
-		command.release();
+	
 
 		m_Device->GetNativeDevice().poll(false);
 

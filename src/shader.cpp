@@ -45,7 +45,8 @@ namespace dtr {
 		shaderDesc.hintCount = 0;
 		shaderDesc.hints = nullptr;
 		shaderDesc.nextInChain = &shaderCodeDesc.chain;
-		return device.createShaderModule(shaderDesc);;
+
+		return device.createShaderModule(shaderDesc);
 	}
 
 }

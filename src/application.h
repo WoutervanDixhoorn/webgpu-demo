@@ -1,4 +1,6 @@
 #pragma once
+#include <array>
+
 #include <GLFW/glfw3.h>
 #include <webgpu/webgpu.hpp>
 
@@ -9,6 +11,13 @@ namespace dtr {
     class Application {
         struct WindowData {
             Application* m_Application;
+        };
+
+        struct MyUniformData {
+            std::array<float, 4> color;
+            float time;
+
+            float _pad[3];
         };
 
     private:
@@ -22,6 +31,9 @@ namespace dtr {
         wgpu::TextureFormat m_SurfaceFormat = wgpu::TextureFormat::Undefined;
         wgpu::Queue m_Queue;
         
+        wgpu::BindGroupLayout m_BindGroupLayout;
+        wgpu::BindGroup m_BindGroup;
+        wgpu::PipelineLayout m_PipelineLayout;
         wgpu::RenderPipeline m_Pipeline;
 
         std::vector<WGPUFeatureName> m_Features;
@@ -30,6 +42,9 @@ namespace dtr {
         wgpu::Buffer m_VertexBuffer;
         wgpu::Buffer m_IndexBuffer;
         uint32_t m_IndexCount;
+
+        wgpu::Buffer m_UniformBuffer;
+
     public:
         bool Initialize();
 
@@ -44,8 +59,11 @@ namespace dtr {
     
         wgpu::TextureView GetNextSurfaceTextureView();
 
+        void InitializeBindGroups();
         void InitializeRenderPipeline();
         void InitializeBuffers();
+
+        void InitializeImGui();
     };
 
 }

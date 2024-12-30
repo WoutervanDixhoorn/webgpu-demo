@@ -87,6 +87,10 @@ namespace dtr {
 		// There is a maximum of 3 float forwarded from vertex to fragment shader
 		requiredLimits.limits.maxInterStageShaderComponents = 3;
 
+		requiredLimits.limits.maxBindGroups = 1;
+		requiredLimits.limits.maxUniformBuffersPerShaderStage = 1;
+		requiredLimits.limits.maxUniformBufferBindingSize = 16 * 4;
+
 		requiredLimits.limits.minUniformBufferOffsetAlignment = supportedLimits.limits.minUniformBufferOffsetAlignment;
 		requiredLimits.limits.minStorageBufferOffsetAlignment = supportedLimits.limits.minStorageBufferOffsetAlignment;
 
