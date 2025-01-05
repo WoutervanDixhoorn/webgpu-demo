@@ -80,16 +80,16 @@ namespace dtr {
 		wgpu::RequiredLimits requiredLimits = wgpu::Default;
 
 		//Only the minimum required limits to run this application
-		requiredLimits.limits.maxVertexAttributes = 2;
+		requiredLimits.limits.maxVertexAttributes = 3;
 		requiredLimits.limits.maxVertexBuffers = 1;
-		requiredLimits.limits.maxBufferSize = 15 * 5 * sizeof(float);
+		requiredLimits.limits.maxBufferSize = 150000 * (5 * sizeof(float));
 		requiredLimits.limits.maxVertexBufferArrayStride = 5 * sizeof(float);
 		// There is a maximum of 3 float forwarded from vertex to fragment shader
-		requiredLimits.limits.maxInterStageShaderComponents = 3;
+		requiredLimits.limits.maxInterStageShaderComponents = 8;
 
-		requiredLimits.limits.maxBindGroups = 1;
+		requiredLimits.limits.maxBindGroups = 2;
 		requiredLimits.limits.maxUniformBuffersPerShaderStage = 1;
-		requiredLimits.limits.maxUniformBufferBindingSize = 16 * 4;
+		requiredLimits.limits.maxUniformBufferBindingSize = 16 * 4 * sizeof(float); //Means the bufferbinding can't be bigger then 16 times 4 floats
 
 		requiredLimits.limits.minUniformBufferOffsetAlignment = supportedLimits.limits.minUniformBufferOffsetAlignment;
 		requiredLimits.limits.minStorageBufferOffsetAlignment = supportedLimits.limits.minStorageBufferOffsetAlignment;

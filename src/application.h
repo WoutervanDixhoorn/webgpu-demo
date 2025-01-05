@@ -24,30 +24,29 @@ namespace dtr {
         bool m_IsRunning = true;
 
         WindowData* m_WindowData = nullptr;
-
         GLFWwindow* m_Window = nullptr;
+
         GraphicsDevice* m_Device = nullptr;
-        wgpu::Surface m_WGPUSurface;
-        wgpu::TextureFormat m_SurfaceFormat = wgpu::TextureFormat::Undefined;
-        wgpu::Queue m_Queue;
-        
-        wgpu::BindGroupLayout m_BindGroupLayout;
-        wgpu::BindGroup m_BindGroup;
-        wgpu::PipelineLayout m_PipelineLayout;
-        wgpu::RenderPipeline m_Pipeline;
 
         std::vector<WGPUFeatureName> m_Features;
-        wgpu::AdapterProperties m_Properties; 
+        wgpu::AdapterProperties m_Properties;
 
+        wgpu::Surface m_WGPUSurface;
+        wgpu::TextureFormat m_SurfaceFormat = wgpu::TextureFormat::Undefined;
+
+        wgpu::Queue m_Queue;
+        wgpu::PipelineLayout m_PipelineLayout;
+        wgpu::RenderPipeline m_Pipeline;
+        wgpu::BindGroupLayout m_BindGroupLayout;
+        wgpu::BindGroup m_BindGroup;
+        
         wgpu::Buffer m_VertexBuffer;
         wgpu::Buffer m_IndexBuffer;
         uint32_t m_IndexCount;
-
         wgpu::Buffer m_UniformBuffer;
 
     public:
         bool Initialize();
-
         void Terminate();
 
         void Update();
@@ -63,7 +62,9 @@ namespace dtr {
         void InitializeRenderPipeline();
         void InitializeBuffers();
 
-        void InitializeImGui();
+        bool InitializeImGui(); // called in onInit
+        void TerminateImGui(); // called in onFinish
+        void UpdateImGui(wgpu::RenderPassEncoder renderPass); // called in onFrame
     };
 
 }

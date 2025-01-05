@@ -16,11 +16,11 @@ endif()
 
 add_subdirectory(vendor/glfw3webgpu)
 
+add_subdirectory(vendor/imgui)
+
 file(GLOB_RECURSE MY_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
-
 add_executable("${CMAKE_PROJECT_NAME}")
-
 
 target_sources("${CMAKE_PROJECT_NAME}" PRIVATE ${MY_SOURCES} )
 
@@ -29,7 +29,7 @@ if (EMSCRIPTEN)
     set_target_properties("${CMAKE_PROJECT_NAME}" PROPERTIES SUFFIX ".html")
 endif()
 
-target_link_libraries("${CMAKE_PROJECT_NAME}" PRIVATE webgpu glfw glfw3webgpu)
+target_link_libraries("${CMAKE_PROJECT_NAME}" PRIVATE webgpu glfw glfw3webgpu imgui)
 
 target_copy_webgpu_binaries("${CMAKE_PROJECT_NAME}")
 
