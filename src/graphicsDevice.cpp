@@ -1,5 +1,3 @@
-
-
 #include "graphicsDevice.h"
 #include "shader.h"
 
@@ -89,7 +87,7 @@ namespace dtr {
 
 		requiredLimits.limits.maxBindGroups = 2;
 		requiredLimits.limits.maxUniformBuffersPerShaderStage = 1;
-		requiredLimits.limits.maxUniformBufferBindingSize = 16 * 4 * sizeof(float); //Means the bufferbinding can't be bigger then 16 times 4 floats
+		requiredLimits.limits.maxUniformBufferBindingSize = 16 * 4 * sizeof(float); //Means the bufferbinding can't be bigger then 16 times 4 floats 
 
 		requiredLimits.limits.minUniformBufferOffsetAlignment = supportedLimits.limits.minUniformBufferOffsetAlignment;
 		requiredLimits.limits.minStorageBufferOffsetAlignment = supportedLimits.limits.minStorageBufferOffsetAlignment;

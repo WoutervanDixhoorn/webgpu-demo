@@ -1,6 +1,5 @@
 #define WEBGPU_CPP_IMPLEMENTATION
 #include "webgpu/webgpu.hpp"
-#include <glfw3webgpu.h>
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -17,29 +16,8 @@ namespace dtr {
 
 	bool Application::Initialize()
 	{
-		if (!glfwInit()) {
-			std::cerr << "Could not initialize GLFW!" << std::endl;
-			return 1;
-		}
-
-		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // <-- extra info for glfwCreateWindow
-		glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-		m_Window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Learn WebGPU", nullptr, nullptr);
-		if (!m_Window) {
-			std::cerr << "Could not open window!" << std::endl;
-			glfwTerminate();
-			return 1;
-		}
-
-		m_WindowData = new WindowData();
-		m_WindowData->m_Application = this;
-		glfwSetWindowUserPointer(m_Window, (void*)m_WindowData);
-
-		glfwSetWindowCloseCallback(m_Window, [](GLFWwindow* window) {
-			WindowData* windowData = reinterpret_cast<WindowData*>(glfwGetWindowUserPointer(window));
-			if (windowData)
-				windowData->m_Application->stopRunning();
-		});
+		m_Window = new Window("Learn WebGPU", WINDOW_WIDTH, WINDOW_HEIGHT);
+		m_Window->SetWindowCallbacks(this);
 
 		wgpu::InstanceDescriptor desc = {};
 		desc.setDefault();
@@ -53,7 +31,7 @@ namespace dtr {
 		std::cout << "WGPU instance: " << instance << "\n";
 
 		//Get the surface to connect glfw with webgpu
-		m_WGPUSurface = glfwGetWGPUSurface(instance, m_Window);
+		m_WGPUSurface = m_Window->GetGraphicsContext(instance);
 
 		//Get the adapter
 		wgpu::RequestAdapterOptions requestAdapterOpt = {};
@@ -76,7 +54,7 @@ namespace dtr {
 
 		//Create webgpu 'device' + 'device specifics'
 		m_Device = new GraphicsDevice();
-		m_Device->Initialize(adapter, m_Window);
+		m_Device->Initialize(adapter, m_Window->GetNativeWindow());
 
 		m_Queue = m_Device->GetDeviceQueue();
 		auto onQueueWorkDone = [](WGPUQueueWorkDoneStatus status, void* /* pUserData */) {
@@ -119,11 +97,10 @@ namespace dtr {
 	{
 		//Binding 1
 		wgpu::BindGroupEntry binding{};
-		binding.binding = 0; //1
+		binding.binding = 0;
 		binding.buffer = m_UniformBuffer; //Object!?
 		binding.offset = 0;
 		binding.size = sizeof(MyUniformData);
-
 
 		//Create bind group
 		wgpu::BindGroupDescriptor bindGroupDesc{};
@@ -282,8 +259,7 @@ namespace dtr {
 		m_Queue.release();
 		m_Device->Dispose();
 
-		glfwDestroyWindow(m_Window);
-		glfwTerminate();
+		m_Window->Terminate();
 	}
 
 	void Application::Update()
@@ -353,7 +329,6 @@ namespace dtr {
 
 		m_Queue.submit(1, &command);
 	
-
 		m_Device->GetNativeDevice().poll(false);
 
 		//Release target view and present surface after
@@ -394,7 +369,7 @@ namespace dtr {
 		ImGui::GetIO();
 
 		// Setup Platform/Renderer backends
-		ImGui_ImplGlfw_InitForOther(m_Window, true);
+		ImGui_ImplGlfw_InitForOther(m_Window->GetNativeWindow(), true);
 		ImGui_ImplWGPU_Init(m_Device->GetNativeDevice(), 3, m_SurfaceFormat);
 		return true;
 	}

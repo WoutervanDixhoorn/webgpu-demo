@@ -1,17 +1,14 @@
 #pragma once
 #include <array>
 
-#include <GLFW/glfw3.h>
 #include <webgpu/webgpu.hpp>
 
+#include "window.h"
 #include "graphicsDevice.h"
 
 namespace dtr {
 
     class Application {
-        struct WindowData {
-            Application* m_Application;
-        };
 
         struct MyUniformData {
             std::array<float, 4> color;
@@ -23,9 +20,7 @@ namespace dtr {
     private:
         bool m_IsRunning = true;
 
-        WindowData* m_WindowData = nullptr;
-        GLFWwindow* m_Window = nullptr;
-
+        Window* m_Window;
         GraphicsDevice* m_Device = nullptr;
 
         std::vector<WGPUFeatureName> m_Features;
@@ -52,10 +47,9 @@ namespace dtr {
         void Update();
 
         inline const bool IsRunning() { return m_IsRunning; };
-        
-    private:
         void stopRunning() { m_IsRunning = false; }
-    
+
+    private:
         wgpu::TextureView GetNextSurfaceTextureView();
 
         void InitializeBindGroups();
