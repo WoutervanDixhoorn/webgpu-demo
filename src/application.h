@@ -4,6 +4,7 @@
 #include <webgpu/webgpu.hpp>
 
 #include "window.h"
+#include "buffer.h"
 #include "graphicsDevice.h"
 
 namespace dtr {
@@ -20,8 +21,10 @@ namespace dtr {
         bool m_IsRunning = false;
 
         Window* m_Window;
+    public:
         GraphicsDevice* m_Device = nullptr;
 
+    private:
         std::vector<WGPUFeatureName> m_Features;
         wgpu::AdapterProperties m_Properties;
 
@@ -34,9 +37,12 @@ namespace dtr {
         wgpu::BindGroupLayout m_BindGroupLayout;
         wgpu::BindGroup m_BindGroup;
         
-        wgpu::Buffer m_VertexBuffer;
+        /*wgpu::Buffer m_VertexBuffer;
         wgpu::Buffer m_IndexBuffer;
-        uint32_t m_IndexCount;
+        uint32_t m_IndexCount;*/
+        VertexBuffer* m_VertexBuffer;
+        IndexBuffer* m_IndexBuffer;
+
         wgpu::Buffer m_UniformBuffer;
 
     public:
@@ -59,7 +65,6 @@ namespace dtr {
         virtual void OnDraw(wgpu::RenderPassEncoder renderPass) = 0;
 
     private:
-        //Hide these
         bool initializeApplication();
         void updateApplication();
         void drawApplication();

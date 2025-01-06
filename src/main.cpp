@@ -6,16 +6,27 @@
 #include <imgui.h>
 
 #include "application.h"
+#include "utility.h"
 
 class SandboxApp : public dtr::Application
 {
-public:
-	SandboxApp() {}
+private:
+	wgpu::Buffer vertexBuffer;
+	uint32_t m_IndexCount;
 
+public:
 	bool Initialize() override
 	{
 		std::cout << "Initialize Application\n";
-		
+
+		std::vector<float> vertexData;
+		std::vector<uint16_t> indexData;
+		dtr::LoadGeometry("assets/webgpu.txt", vertexData, indexData);
+
+		m_IndexCount = static_cast<uint32_t>(indexData.size());
+
+
+
 		return true;
 	}
 

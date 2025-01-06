@@ -8,6 +8,7 @@
 #include "application.h"
 #include "shader.h"
 #include "utility.h"
+#include "buffer.h"
 
 #define WINDOW_WIDTH 1280
 #define WINDOW_HEIGHT 720
@@ -217,24 +218,30 @@ namespace dtr {
 
 		LoadGeometry("assets/webgpu.txt", vertexData, indexData);
 
-		m_IndexCount = static_cast<uint32_t>(indexData.size());
+		m_VertexBuffer = new VertexBuffer();
+		m_VertexBuffer->SetData(vertexData.data(), vertexData.size());
 
-		wgpu::BufferDescriptor bufferDesc;
-		bufferDesc.size = vertexData.size() * sizeof(float);
-		bufferDesc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Vertex; // Vertex usage here!
-		bufferDesc.mappedAtCreation = false;
-		m_VertexBuffer = m_Device->GetNativeDevice().createBuffer(bufferDesc);
+		m_IndexBuffer = new IndexBuffer();
+		m_IndexBuffer->SetData(indexData.data(), indexData.size());
+		//m_IndexCount = static_cast<uint32_t>(indexData.size());
 
-		m_Queue.writeBuffer(m_VertexBuffer, 0, vertexData.data(), bufferDesc.size);
+		//wgpu::BufferDescriptor bufferDesc;
+		//bufferDesc.size = vertexData.size() * sizeof(float);
+		//bufferDesc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Vertex; // Vertex usage here!
+		//bufferDesc.mappedAtCreation = false;
+		//m_VertexBuffer = m_Device->GetNativeDevice().createBuffer(bufferDesc);
 
-		bufferDesc.size = indexData.size() * sizeof(uint16_t);
-		bufferDesc.size = (bufferDesc.size + 3) & ~3; // round up to the next multiple of 4
-		bufferDesc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Index; // Vertex usage here!
-		m_IndexBuffer = m_Device->GetNativeDevice().createBuffer(bufferDesc);
+		//m_Queue.writeBuffer(m_VertexBuffer, 0, vertexData.data(), bufferDesc.size);
 
-		m_Queue.writeBuffer(m_IndexBuffer, 0, indexData.data(), bufferDesc.size);
+		//bufferDesc.size = indexData.size() * sizeof(uint16_t);
+		//bufferDesc.size = (bufferDesc.size + 3) & ~3; // round up to the next multiple of 4
+		//bufferDesc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Index; // Vertex usage here!
+		//m_IndexBuffer = m_Device->GetNativeDevice().createBuffer(bufferDesc);
+
+		//m_Queue.writeBuffer(m_IndexBuffer, 0, indexData.data(), bufferDesc.size);
 
 		//Init uniform buffers
+		wgpu::BufferDescriptor bufferDesc;
 		bufferDesc.size = sizeof(MyUniformData);
 		bufferDesc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform;
 		m_UniformBuffer = m_Device->GetNativeDevice().createBuffer(bufferDesc);
@@ -252,8 +259,9 @@ namespace dtr {
 		terminateImGui();
 
 		m_UniformBuffer.release();
-		m_VertexBuffer.release();
-		m_IndexBuffer.release();
+		//Dtr
+		m_VertexBuffer->Release();
+		m_IndexBuffer->Release();
 
 		m_BindGroupLayout.release();
 		m_PipelineLayout.release();
@@ -287,7 +295,6 @@ namespace dtr {
 	{
 		glfwPollEvents();
 
-		//Update then draw
 		OnUpdate();
 	}
 
@@ -349,9 +356,12 @@ namespace dtr {
 		renderPass.setPipeline(m_Pipeline);
 
 		// Draw 1 instance of a 3-vertices shape
-		renderPass.setVertexBuffer(0, m_VertexBuffer, 0, m_VertexBuffer.getSize());
-		renderPass.setIndexBuffer(m_IndexBuffer, wgpu::IndexFormat::Uint16, 0, m_IndexBuffer.getSize());
+		//renderPass.setVertexBuffer(0, m_VertexBuffer, 0, m_VertexBuffer.getSize());
+		//renderPass.setIndexBuffer(m_IndexBuffer, wgpu::IndexFormat::Uint16, 0, m_IndexBuffer.getSize());
+		m_VertexBuffer->Bind(renderPass);
+		m_IndexBuffer->Bind(renderPass);
 
+		//Set uniform bind group
 		renderPass.setBindGroup(0, m_BindGroup, 0, nullptr);
 
 		//Write value to buffer!
@@ -363,7 +373,7 @@ namespace dtr {
 		// Upload only the time, whichever its order in the struct
 		m_Queue.writeBuffer(m_UniformBuffer, offsetof(MyUniformData, color), &color, sizeof(MyUniformData::color));
 
-		renderPass.drawIndexed(m_IndexCount, 1, 0, 0, 0);
+		renderPass.drawIndexed(m_IndexBuffer->GetCount(), 1, 0, 0, 0);
 
 		OnDraw(renderPass);
 
