@@ -7,9 +7,7 @@
 #include "graphicsDevice.h"
 
 namespace dtr {
-
     class Application {
-
         struct MyUniformData {
             std::array<float, 4> color;
             float time;
@@ -18,7 +16,8 @@ namespace dtr {
         };
 
     private:
-        bool m_IsRunning = true;
+        static Application* m_Instance;
+        bool m_IsRunning = false;
 
         Window* m_Window;
         GraphicsDevice* m_Device = nullptr;
@@ -41,24 +40,49 @@ namespace dtr {
         wgpu::Buffer m_UniformBuffer;
 
     public:
-        bool Initialize();
-        void Terminate();
+        static Application* Get(){ 
+            if (m_Instance == nullptr) {
+                m_Instance = Application::CreateApplication();
+            }
+            return m_Instance; 
+        }
 
-        void Update();
+        void Run();
 
         inline const bool IsRunning() { return m_IsRunning; };
-        void stopRunning() { m_IsRunning = false; }
+        void StopRunning() { m_IsRunning = false; }
+
+        virtual bool Initialize() = 0;
+        virtual void Terminate() = 0;
+        virtual void OnGuiDraw() = 0;
+        virtual void OnUpdate() = 0;
+        virtual void OnDraw(wgpu::RenderPassEncoder renderPass) = 0;
 
     private:
+        //Hide these
+        bool initializeApplication();
+        void updateApplication();
+        void drawApplication();
+        void terminateApplication();
+
+    private:
+        //Add this to Renderer? RenderBegin(); RenderEnd(); maybe
         wgpu::TextureView GetNextSurfaceTextureView();
 
-        void InitializeBindGroups();
-        void InitializeRenderPipeline();
-        void InitializeBuffers();
+        //Add to Renderer Initialization
+        void initializeBindGroups();
+        void initializeRenderPipeline();
+        void initializeBuffers();
 
-        bool InitializeImGui(); // called in onInit
-        void TerminateImGui(); // called in onFinish
-        void UpdateImGui(wgpu::RenderPassEncoder renderPass); // called in onFrame
+        //Add into ImGui Layer
+        bool initializeImGui(); // called in onInit
+        void terminateImGui(); // called in onFinish
+        void updateImGui(wgpu::RenderPassEncoder renderPass); // called in onFrame
+
+    public:
+        static Application* CreateApplication();
     };
 
+
+   
 }

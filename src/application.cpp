@@ -14,10 +14,11 @@
 
 namespace dtr {
 
-	bool Application::Initialize()
+	Application* Application::m_Instance = nullptr;
+
+	bool Application::initializeApplication()
 	{
 		m_Window = new Window("Learn WebGPU", WINDOW_WIDTH, WINDOW_HEIGHT);
-		m_Window->SetWindowCallbacks(this);
 
 		wgpu::InstanceDescriptor desc = {};
 		desc.setDefault();
@@ -84,16 +85,19 @@ namespace dtr {
 
 		adapter.release();
 
-		InitializeBuffers();
-		InitializeRenderPipeline();
-		InitializeBindGroups();
+		initializeBuffers();
+		initializeRenderPipeline();
+		initializeBindGroups();
 
-		if (!InitializeImGui()) return false;
+		if (!initializeImGui()) return false;
+
+		//Initialize created application
+		Initialize();
 
 		return true;
 	}
 
-	void Application::InitializeBindGroups()
+	void Application::initializeBindGroups()
 	{
 		//Binding 1
 		wgpu::BindGroupEntry binding{};
@@ -110,7 +114,7 @@ namespace dtr {
 		m_BindGroup = m_Device->GetNativeDevice().createBindGroup(bindGroupDesc);
 	}
 
-	void Application::InitializeRenderPipeline()
+	void Application::initializeRenderPipeline()
 	{	
 		Shader shader("assets/shaders/triangle.wgsl");
 		wgpu::ShaderModule shaderModule = shader.GetShaderModule(m_Device->GetNativeDevice());
@@ -197,7 +201,7 @@ namespace dtr {
 		m_Pipeline = m_Device->GetNativeDevice().createRenderPipeline(pipelineDesc);
 	}
 
-	void Application::InitializeBuffers()
+	void Application::initializeBuffers()
 	{
 		std::vector<float> vertexData = {
 			-0.5, -0.5,   1.0, 0.0, 0.0,
@@ -241,9 +245,11 @@ namespace dtr {
 		m_Queue.writeBuffer(m_UniformBuffer, 0, &uniforms, sizeof(float));
 	}
 
-	void Application::Terminate()
+	void Application::terminateApplication()
 	{
-		TerminateImGui();
+		Terminate(); //Terminate Application
+
+		terminateImGui();
 
 		m_UniformBuffer.release();
 		m_VertexBuffer.release();
@@ -262,78 +268,27 @@ namespace dtr {
 		m_Window->Terminate();
 	}
 
-	void Application::Update()
+	void Application::Run()
+	{
+		initializeApplication();
+
+		m_IsRunning = true;
+
+		while (m_IsRunning)
+		{
+			updateApplication();
+			drawApplication();
+		}
+
+		terminateApplication();
+	}
+
+	void Application::updateApplication()
 	{
 		glfwPollEvents();
 
-		//Get target view
-		wgpu::TextureView targetView = GetNextSurfaceTextureView();
-		if (!targetView) return;
-
-		//Create and Submit commands/Render queue
-		wgpu::CommandEncoderDescriptor encoderDesc = {};
-		encoderDesc.setDefault();
-		encoderDesc.label = "My command encoder";
-		wgpu::CommandEncoder encoder = m_Device->GetNativeDevice().createCommandEncoder(encoderDesc);
-
-		wgpu::RenderPassColorAttachment renderPassColorAttachment = {};
-		renderPassColorAttachment.setDefault();
-		renderPassColorAttachment.view = targetView;
-		renderPassColorAttachment.resolveTarget = nullptr;
-		renderPassColorAttachment.loadOp = WGPULoadOp_Clear;
-		renderPassColorAttachment.storeOp = WGPUStoreOp_Store;
-		renderPassColorAttachment.clearValue = WGPUColor{ 0.05, 0.05, 0.05, 1.0 };
-
-		wgpu::RenderPassDescriptor renderPassDesc = {};
-		renderPassDesc.setDefault();
-		renderPassDesc.colorAttachmentCount = 1;
-		renderPassDesc.colorAttachments = &renderPassColorAttachment;
-		renderPassDesc.depthStencilAttachment = nullptr;
-		renderPassDesc.timestampWrites = nullptr;
-		wgpu::RenderPassEncoder renderPass = encoder.beginRenderPass(renderPassDesc);
-
-		//Do something with the renderpass
-		renderPass.setPipeline(m_Pipeline);
-		
-		//Draw UI
-		//UpdateImGui(renderPass);
-
-		// Draw 1 instance of a 3-vertices shape
-		renderPass.setVertexBuffer(0, m_VertexBuffer, 0, m_VertexBuffer.getSize());
-		renderPass.setIndexBuffer(m_IndexBuffer, wgpu::IndexFormat::Uint16, 0, m_IndexBuffer.getSize());
-
-		renderPass.setBindGroup(0, m_BindGroup, 0, nullptr);
-
-		//Write value to buffer!
-		float time = static_cast<float>(glfwGetTime());
-		// Upload only the time, whichever its order in the struct
-		m_Queue.writeBuffer(m_UniformBuffer, offsetof(MyUniformData, time), &time, sizeof(float));
-
-		float color[4] = { 0.0f, 1.0f, 0.4f, 1.0f };;
-		// Upload only the time, whichever its order in the struct
-		m_Queue.writeBuffer(m_UniformBuffer, offsetof(MyUniformData, color), &color, sizeof(MyUniformData::color));
-
-		renderPass.drawIndexed(m_IndexCount, 1, 0, 0, 0);
-
-		UpdateImGui(renderPass);
-
-		renderPass.end();
-		renderPass.release();
-		
-		wgpu::CommandBufferDescriptor cmdBufferDescriptor = {};
-		cmdBufferDescriptor.setDefault();
-		cmdBufferDescriptor.label = "Command buffer";
-		wgpu::CommandBuffer command = encoder.finish(cmdBufferDescriptor);
-
-		encoder.release();
-
-		m_Queue.submit(1, &command);
-	
-		m_Device->GetNativeDevice().poll(false);
-
-		//Release target view and present surface after
-		targetView.release();
-		m_WGPUSurface.present();
+		//Update then draw
+		OnUpdate();
 	}
 
 	wgpu::TextureView Application::GetNextSurfaceTextureView()
@@ -362,7 +317,78 @@ namespace dtr {
 		return targetView;
 	}
 
-	bool Application::InitializeImGui()
+	void Application::drawApplication()
+	{
+		//Get target view
+		wgpu::TextureView targetView = GetNextSurfaceTextureView();
+		if (!targetView) return;
+
+		//Create and Submit commands/Render queue
+		wgpu::CommandEncoderDescriptor encoderDesc = {};
+		encoderDesc.setDefault();
+		encoderDesc.label = "My command encoder";
+		wgpu::CommandEncoder encoder = m_Device->GetNativeDevice().createCommandEncoder(encoderDesc);
+
+		wgpu::RenderPassColorAttachment renderPassColorAttachment = {};
+		renderPassColorAttachment.setDefault();
+		renderPassColorAttachment.view = targetView;
+		renderPassColorAttachment.resolveTarget = nullptr;
+		renderPassColorAttachment.loadOp = WGPULoadOp_Clear;
+		renderPassColorAttachment.storeOp = WGPUStoreOp_Store;
+		renderPassColorAttachment.clearValue = WGPUColor{ 0.05, 0.05, 0.05, 1.0 };
+
+		wgpu::RenderPassDescriptor renderPassDesc = {};
+		renderPassDesc.setDefault();
+		renderPassDesc.colorAttachmentCount = 1;
+		renderPassDesc.colorAttachments = &renderPassColorAttachment;
+		renderPassDesc.depthStencilAttachment = nullptr;
+		renderPassDesc.timestampWrites = nullptr;
+		wgpu::RenderPassEncoder renderPass = encoder.beginRenderPass(renderPassDesc);
+
+		//Do something with the renderpass
+		renderPass.setPipeline(m_Pipeline);
+
+		// Draw 1 instance of a 3-vertices shape
+		renderPass.setVertexBuffer(0, m_VertexBuffer, 0, m_VertexBuffer.getSize());
+		renderPass.setIndexBuffer(m_IndexBuffer, wgpu::IndexFormat::Uint16, 0, m_IndexBuffer.getSize());
+
+		renderPass.setBindGroup(0, m_BindGroup, 0, nullptr);
+
+		//Write value to buffer!
+		float time = static_cast<float>(glfwGetTime());
+		// Upload only the time, whichever its order in the struct
+		m_Queue.writeBuffer(m_UniformBuffer, offsetof(MyUniformData, time), &time, sizeof(float));
+
+		float color[4] = { 0.0f, 1.0f, 0.4f, 1.0f };;
+		// Upload only the time, whichever its order in the struct
+		m_Queue.writeBuffer(m_UniformBuffer, offsetof(MyUniformData, color), &color, sizeof(MyUniformData::color));
+
+		renderPass.drawIndexed(m_IndexCount, 1, 0, 0, 0);
+
+		OnDraw(renderPass);
+
+		updateImGui(renderPass);
+
+		renderPass.end();
+		renderPass.release();
+
+		wgpu::CommandBufferDescriptor cmdBufferDescriptor = {};
+		cmdBufferDescriptor.setDefault();
+		cmdBufferDescriptor.label = "Command buffer";
+		wgpu::CommandBuffer command = encoder.finish(cmdBufferDescriptor);
+
+		encoder.release();
+
+		m_Queue.submit(1, &command);
+
+		m_Device->GetNativeDevice().poll(false);
+
+		//Release target view and present surface after
+		targetView.release();
+		m_WGPUSurface.present();
+	}
+
+	bool Application::initializeImGui()
 	{
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
@@ -374,44 +400,20 @@ namespace dtr {
 		return true;
 	}
 
-	void Application::TerminateImGui()
+	void Application::terminateImGui()
 	{
 		ImGui_ImplGlfw_Shutdown();
 		ImGui_ImplWGPU_Shutdown();
 	}
 
-	void Application::UpdateImGui(wgpu::RenderPassEncoder renderPass)
+	void Application::updateImGui(wgpu::RenderPassEncoder renderPass)
 	{
 		ImGui_ImplWGPU_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
 		// [...] Build our UI
-		{
-			static float f = 0.0f;
-			static int counter = 0;
-			static bool show_demo_window = true;
-			static bool show_another_window = false;
-			static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-
-			ImGui::Begin("Hello, world!");                                // Create a window called "Hello, world!" and append into it.
-
-			ImGui::Text("This is some useful text.");                     // Display some text (you can use a format strings too)
-			ImGui::Checkbox("Demo Window", &show_demo_window);            // Edit bools storing our window open/close state
-			ImGui::Checkbox("Another Window", &show_another_window);
-
-			ImGui::SliderFloat("float", &f, 0.0f, 1.0f);                  // Edit 1 float using a slider from 0.0f to 1.0f
-			ImGui::ColorEdit3("clear color", (float*)&clear_color);       // Edit 3 floats representing a color
-
-			if (ImGui::Button("Button"))                                  // Buttons return true when clicked (most widgets return true when edited/activated)
-				counter++;
-			ImGui::SameLine();
-			ImGui::Text("counter = %d", counter);
-
-			ImGuiIO& io = ImGui::GetIO();
-			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-			ImGui::End();
-		}
+		OnGuiDraw();
 
 		// Draw the UI
 		ImGui::EndFrame();

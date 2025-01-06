@@ -52,18 +52,11 @@ namespace dtr
 			return false;
 		}
 
-		return true;
-	}
-
-	void Window::SetWindowCallbacks(Application* applicationPtr)
-	{
-		m_WindowData->m_Application = applicationPtr;
-		glfwSetWindowUserPointer(m_Window, (void*)m_WindowData);
-
+		//Setup Callbacks
 		glfwSetWindowCloseCallback(m_Window, [](GLFWwindow* window) {
-			WindowData* windowData = reinterpret_cast<WindowData*>(glfwGetWindowUserPointer(window));
-			if (windowData)
-				windowData->m_Application->stopRunning();
-		});
+			Application::Get()->StopRunning();
+			});
+
+		return true;
 	}
 }
