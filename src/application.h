@@ -36,12 +36,6 @@ namespace dtr {
         wgpu::RenderPipeline m_Pipeline;
         wgpu::BindGroupLayout m_BindGroupLayout;
         wgpu::BindGroup m_BindGroup;
-        
-        /*wgpu::Buffer m_VertexBuffer;
-        wgpu::Buffer m_IndexBuffer;
-        uint32_t m_IndexCount;*/
-        VertexBuffer* m_VertexBuffer;
-        IndexBuffer* m_IndexBuffer;
 
         wgpu::Buffer m_UniformBuffer;
 

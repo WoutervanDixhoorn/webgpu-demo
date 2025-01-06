@@ -7,25 +7,29 @@
 
 #include "application.h"
 #include "utility.h"
+#include "buffer.h"
 
 class SandboxApp : public dtr::Application
 {
 private:
-	wgpu::Buffer vertexBuffer;
-	uint32_t m_IndexCount;
+	dtr::VertexBuffer* m_VertexBuffer;
+	dtr::IndexBuffer* m_IndexBuffer;
 
 public:
 	bool Initialize() override
 	{
 		std::cout << "Initialize Application\n";
 
-		std::vector<float> vertexData;
-		std::vector<uint16_t> indexData;
+		std::vector<float> vertexData = {};
+		std::vector<uint16_t> indexData = {};
+
 		dtr::LoadGeometry("assets/webgpu.txt", vertexData, indexData);
 
-		m_IndexCount = static_cast<uint32_t>(indexData.size());
+		m_VertexBuffer = new dtr::VertexBuffer();
+		m_VertexBuffer->SetData(vertexData.data(), vertexData.size());
 
-
+		m_IndexBuffer = new dtr::IndexBuffer();
+		m_IndexBuffer->SetData(indexData.data(), indexData.size());
 
 		return true;
 	}
@@ -69,6 +73,10 @@ public:
 
 	void OnDraw(wgpu::RenderPassEncoder renderPass) override
 	{
+		m_VertexBuffer->Bind(renderPass);
+		m_IndexBuffer->Bind(renderPass);
+
+		renderPass.drawIndexed(m_IndexBuffer->GetCount(), 1, 0, 0, 0);
 	}
 
 };

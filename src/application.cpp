@@ -178,24 +178,28 @@ namespace dtr {
 		pipelineDesc.multisample.mask = ~0u;
 		pipelineDesc.multisample.alphaToCoverageEnabled = false;
 
+		//TODO: Abstract away uniform creation / RendererPipeline creation
 		//Describe the uniforms, each entry is a uniform buffer?!
-		wgpu::BindGroupLayoutEntry bindGroupLayoutEntry = wgpu::Default;
-		bindGroupLayoutEntry.binding = 0; // @binding(0) attribute in shader //1
-		bindGroupLayoutEntry.visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
-		bindGroupLayoutEntry.buffer.type = wgpu::BufferBindingType::Uniform;
-		bindGroupLayoutEntry.buffer.minBindingSize = sizeof(MyUniformData); //2
+		{
+			wgpu::BindGroupLayoutEntry bindGroupLayoutEntry = wgpu::Default;
+			bindGroupLayoutEntry.binding = 0; // @binding(0) attribute in shader //1
+			bindGroupLayoutEntry.visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
+			bindGroupLayoutEntry.buffer.type = wgpu::BufferBindingType::Uniform;
+			bindGroupLayoutEntry.buffer.minBindingSize = sizeof(MyUniformData); //2
 
-		//Define the layout with the uniform entries!
-		wgpu::BindGroupLayoutDescriptor bindGroupLayoutDesc{};
-		bindGroupLayoutDesc.entryCount = 1;
-		bindGroupLayoutDesc.entries = &bindGroupLayoutEntry;
-		m_BindGroupLayout = m_Device->GetNativeDevice().createBindGroupLayout(bindGroupLayoutDesc);
+			//Define the layout with the uniform entries!
+			wgpu::BindGroupLayoutDescriptor bindGroupLayoutDesc{};
+			bindGroupLayoutDesc.entryCount = 1;
+			bindGroupLayoutDesc.entries = &bindGroupLayoutEntry;
+			m_BindGroupLayout = m_Device->GetNativeDevice().createBindGroupLayout(bindGroupLayoutDesc);
 
-		//Create pipelineLayout using the BindGroupLayouts.
-		wgpu::PipelineLayoutDescriptor pipelineLayoutDesc{};
-		pipelineLayoutDesc.bindGroupLayoutCount = 1;
-		pipelineLayoutDesc.bindGroupLayouts = (WGPUBindGroupLayout*)&m_BindGroupLayout;
-		m_PipelineLayout = m_Device->GetNativeDevice().createPipelineLayout(pipelineLayoutDesc);
+			//Create pipelineLayout using the BindGroupLayouts.
+			wgpu::PipelineLayoutDescriptor pipelineLayoutDesc{};
+			pipelineLayoutDesc.bindGroupLayoutCount = 1;
+			pipelineLayoutDesc.bindGroupLayouts = (WGPUBindGroupLayout*)&m_BindGroupLayout;
+
+			m_PipelineLayout = m_Device->GetNativeDevice().createPipelineLayout(pipelineLayoutDesc);
+		}
 
 		pipelineDesc.layout = m_PipelineLayout;
 
@@ -204,42 +208,7 @@ namespace dtr {
 
 	void Application::initializeBuffers()
 	{
-		std::vector<float> vertexData = {
-			-0.5, -0.5,   1.0, 0.0, 0.0,
-			+0.5, -0.5,   0.0, 1.0, 0.0,
-			+0.5, +0.5,   0.0, 0.0, 1.0,
-			-0.5, +0.5,   1.0, 1.0, 0.0
-		};
-
-		std::vector<uint16_t> indexData = {
-			0, 1, 2, 
-			0, 2, 3 
-		};
-
-		LoadGeometry("assets/webgpu.txt", vertexData, indexData);
-
-		m_VertexBuffer = new VertexBuffer();
-		m_VertexBuffer->SetData(vertexData.data(), vertexData.size());
-
-		m_IndexBuffer = new IndexBuffer();
-		m_IndexBuffer->SetData(indexData.data(), indexData.size());
-		//m_IndexCount = static_cast<uint32_t>(indexData.size());
-
-		//wgpu::BufferDescriptor bufferDesc;
-		//bufferDesc.size = vertexData.size() * sizeof(float);
-		//bufferDesc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Vertex; // Vertex usage here!
-		//bufferDesc.mappedAtCreation = false;
-		//m_VertexBuffer = m_Device->GetNativeDevice().createBuffer(bufferDesc);
-
-		//m_Queue.writeBuffer(m_VertexBuffer, 0, vertexData.data(), bufferDesc.size);
-
-		//bufferDesc.size = indexData.size() * sizeof(uint16_t);
-		//bufferDesc.size = (bufferDesc.size + 3) & ~3; // round up to the next multiple of 4
-		//bufferDesc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Index; // Vertex usage here!
-		//m_IndexBuffer = m_Device->GetNativeDevice().createBuffer(bufferDesc);
-
-		//m_Queue.writeBuffer(m_IndexBuffer, 0, indexData.data(), bufferDesc.size);
-
+		//TODO: Abstract away!
 		//Init uniform buffers
 		wgpu::BufferDescriptor bufferDesc;
 		bufferDesc.size = sizeof(MyUniformData);
@@ -259,9 +228,6 @@ namespace dtr {
 		terminateImGui();
 
 		m_UniformBuffer.release();
-		//Dtr
-		m_VertexBuffer->Release();
-		m_IndexBuffer->Release();
 
 		m_BindGroupLayout.release();
 		m_PipelineLayout.release();
@@ -294,6 +260,16 @@ namespace dtr {
 	void Application::updateApplication()
 	{
 		glfwPollEvents();
+
+		//TODO: Abstract away writing uniform data
+		//Write value to buffer!
+		float time = static_cast<float>(glfwGetTime());
+		// Upload only the time, whichever its order in the struct
+		m_Queue.writeBuffer(m_UniformBuffer, offsetof(MyUniformData, time), &time, sizeof(float));
+
+		float color[4] = { 0.0f, 1.0f, 0.4f, 1.0f };
+		// Upload only the time, whichever its order in the struct
+		m_Queue.writeBuffer(m_UniformBuffer, offsetof(MyUniformData, color), &color, sizeof(MyUniformData::color));
 
 		OnUpdate();
 	}
@@ -355,26 +331,10 @@ namespace dtr {
 		//Do something with the renderpass
 		renderPass.setPipeline(m_Pipeline);
 
-		// Draw 1 instance of a 3-vertices shape
-		//renderPass.setVertexBuffer(0, m_VertexBuffer, 0, m_VertexBuffer.getSize());
-		//renderPass.setIndexBuffer(m_IndexBuffer, wgpu::IndexFormat::Uint16, 0, m_IndexBuffer.getSize());
-		m_VertexBuffer->Bind(renderPass);
-		m_IndexBuffer->Bind(renderPass);
-
-		//Set uniform bind group
+		//TODO: Abstract away uniform buffer! So make a uniform buffer thats bindable!?
 		renderPass.setBindGroup(0, m_BindGroup, 0, nullptr);
-
-		//Write value to buffer!
-		float time = static_cast<float>(glfwGetTime());
-		// Upload only the time, whichever its order in the struct
-		m_Queue.writeBuffer(m_UniformBuffer, offsetof(MyUniformData, time), &time, sizeof(float));
-
-		float color[4] = { 0.0f, 1.0f, 0.4f, 1.0f };;
-		// Upload only the time, whichever its order in the struct
-		m_Queue.writeBuffer(m_UniformBuffer, offsetof(MyUniformData, color), &color, sizeof(MyUniformData::color));
-
-		renderPass.drawIndexed(m_IndexBuffer->GetCount(), 1, 0, 0, 0);
-
+	
+		//Draw user defined buffers!?
 		OnDraw(renderPass);
 
 		updateImGui(renderPass);
