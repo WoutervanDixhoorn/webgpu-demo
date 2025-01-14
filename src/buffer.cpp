@@ -23,9 +23,9 @@ namespace dtr
 		bufferDesc.size = m_VertexCount * sizeof(float);
 		bufferDesc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Vertex; // Vertex usage here!
 		bufferDesc.mappedAtCreation = false;
-		m_Buffer = Application::Get()->m_Device->GetNativeDevice().createBuffer(bufferDesc);
+		m_Buffer = Application::Get()->m_Context->CreateBuffer(bufferDesc);
 
-		Application::Get()->m_Device->GetDeviceQueue().writeBuffer(m_Buffer, 0, m_Data, bufferDesc.size);
+		Application::Get()->m_Context->WriteBuffer(m_Buffer, m_Data, bufferDesc.size);
 	}
 
 	void VertexBuffer::Release()
@@ -52,9 +52,9 @@ namespace dtr
 		bufferDesc.size = (bufferDesc.size + 3) & ~3;
 		bufferDesc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Index;
 		bufferDesc.mappedAtCreation = false;
-		m_Buffer = Application::Get()->m_Device->GetNativeDevice().createBuffer(bufferDesc);
+		m_Buffer = Application::Get()->m_Context->CreateBuffer(bufferDesc);
 
-		Application::Get()->m_Device->GetDeviceQueue().writeBuffer(m_Buffer, 0, m_Data, bufferDesc.size);
+		Application::Get()->m_Context->WriteBuffer(m_Buffer, m_Data, bufferDesc.size);
 	}
 
 	void IndexBuffer::Release()
@@ -78,10 +78,9 @@ namespace dtr
 		bufferDesc.size = uniformSize;
 		bufferDesc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform;
 		bufferDesc.mappedAtCreation = false;
-		m_Buffer = Application::Get()->m_Device->GetNativeDevice().createBuffer(bufferDesc);
+		m_Buffer = Application::Get()->m_Context->CreateBuffer(bufferDesc);
 
-		Application::Get()->m_Device->GetDeviceQueue().writeBuffer(m_Buffer, 0, &uniformData, uniformSize);
-		
+		Application::Get()->m_Context->WriteBuffer(m_Buffer, uniformData, bufferDesc.size);
 
 		//Initialize layout
 		wgpu::BindGroupLayoutEntry bindGroupLayoutEntry = wgpu::Default;
@@ -93,7 +92,7 @@ namespace dtr
 		wgpu::BindGroupLayoutDescriptor bindGroupLayoutDesc{};
 		bindGroupLayoutDesc.entryCount = 1;
 		bindGroupLayoutDesc.entries = &bindGroupLayoutEntry;
-		m_Layout = Application::Get()->m_Device->GetNativeDevice().createBindGroupLayout(bindGroupLayoutDesc);
+		m_Layout = Application::Get()->m_Context->GetNativeDevice().createBindGroupLayout(bindGroupLayoutDesc);
 		
 		
 		{ //Initialize bindGroup
@@ -107,7 +106,7 @@ namespace dtr
 			bindGroupDesc.layout = m_Layout;
 			bindGroupDesc.entryCount = 1;
 			bindGroupDesc.entries = &binding;
-			m_BindGroup = Application::Get()->m_Device->GetNativeDevice().createBindGroup(bindGroupDesc);
+			m_BindGroup = Application::Get()->m_Context->GetNativeDevice().createBindGroup(bindGroupDesc);
 		}
 
 		m_UniformSize = uniformSize;
@@ -115,7 +114,7 @@ namespace dtr
 	
 	void UniformBuffer::UpdateData(void* uniformData, uint64_t dataSize)
 	{
-		Application::Get()->m_Device->GetDeviceQueue().writeBuffer(m_Buffer, 0, uniformData, dataSize);
+		Application::Get()->m_Context->WriteBuffer(m_Buffer, uniformData, dataSize);
 	}
 
 	WGPUBindGroupLayout* UniformBuffer::GetLayout()

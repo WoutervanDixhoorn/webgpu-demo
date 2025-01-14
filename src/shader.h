@@ -3,6 +3,8 @@
 
 #include <string>
 
+#include "buffer.h"
+
 namespace dtr {
 
 	class Shader {
@@ -10,11 +12,13 @@ namespace dtr {
 		const char* m_FileName;
 		std::string m_ShaderSource;
 
+		UniformBuffer* m_UniformBuffer;
+
 	public:
 		Shader(const char* fileName);
 
 		const char* GetShaderSource() const { return m_ShaderSource.c_str(); }
-		wgpu::ShaderModule GetShaderModule(wgpu::Device device) const;
+		wgpu::ShaderModule GetShaderModule() const;
 
 	private:
 		std::string LoadShaderFromFile();

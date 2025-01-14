@@ -3,7 +3,7 @@
 
 namespace dtr {
 
-	bool GraphicsDevice::Initialize(wgpu::Adapter adapter, GLFWwindow* window)
+	bool GraphicsDevice::Initialize(wgpu::Adapter adapter)
 	{	
 		wgpu::RequiredLimits requiredLimits = GetRequiredLimits(adapter);
 
@@ -31,15 +31,19 @@ namespace dtr {
 		};
 		m_Device.setUncapturedErrorCallback(uncapturedErrorCallback);
 
+		auto onQueueWorkDone = [](WGPUQueueWorkDoneStatus status, void* /* pUserData */) {
+			std::cout << "Queued work finished with status: " << status << "\n";
+			};
+		wgpuQueueOnSubmittedWorkDone(GetDeviceQueue(), onQueueWorkDone, nullptr /* pUserData */);
+
 		InspectDevice();
 
 		return true;
 	}
 
-	bool GraphicsDevice::Dispose()
+	void GraphicsDevice::Release()
 	{
 		m_Device.release();
-		return true;
 	}
 
 	void GraphicsDevice::InspectDevice()

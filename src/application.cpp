@@ -21,54 +21,11 @@ namespace dtr {
 	{
 		m_Window = new Window("Learn WebGPU", WINDOW_WIDTH, WINDOW_HEIGHT);
 
-		wgpu::InstanceDescriptor desc = {};
-		desc.setDefault();
-		wgpu::Instance instance = wgpu::createInstance(desc);
-		if (!instance) {
-			std::cerr << "Could not initialize WebGPU!\n";
-			return false;
-		}
-
-		//TODO: Create or download logging library!
-		std::cout << "WGPU instance: " << instance << "\n";
-
-		//Get the surface to connect glfw with webgpu
-		wgpu::Surface wgpuSurface = m_Window->GetGraphicsContext(instance);
-
-		//Get the adapter
-		wgpu::RequestAdapterOptions requestAdapterOpt = {};
-		requestAdapterOpt.powerPreference = WGPUPowerPreference_HighPerformance;
-		requestAdapterOpt.compatibleSurface = wgpuSurface;
-		requestAdapterOpt.setDefault();
-
-		wgpu::Adapter adapter = instance.requestAdapter(requestAdapterOpt);
-
-		instance.release();
-
-		//Get adapter features
-		size_t featureCount = wgpuAdapterEnumerateFeatures(adapter, nullptr);
-		m_Features.resize(featureCount);
-		wgpuAdapterEnumerateFeatures(adapter, m_Features.data());
-
-		//Get adapter properties, usefull info for user of the program
-		m_Properties.setDefault();
-		adapter.getProperties(&m_Properties);
-
-		//Create webgpu 'device' + 'device specifics'
-		m_Device = new GraphicsDevice();
-		m_Device->Initialize(adapter, m_Window->GetNativeWindow());
-
-		m_Queue = m_Device->GetDeviceQueue();
-		auto onQueueWorkDone = [](WGPUQueueWorkDoneStatus status, void* /* pUserData */) {
-			std::cout << "Queued work finished with status: " << status << "\n";
-		};
-		wgpuQueueOnSubmittedWorkDone(m_Queue, onQueueWorkDone, nullptr /* pUserData */);
-
+		m_Context = new GraphicsContext();
+		m_Context->Initialize(WINDOW_WIDTH, WINDOW_HEIGHT);
 
 		m_Renderer = new Renderer();
-		m_Renderer->Initialize(wgpuSurface, adapter);
-		adapter.release();
-
+		m_Renderer->Initialize();
 
 		if (!initializeImGui()) return false;
 		
@@ -85,9 +42,6 @@ namespace dtr {
 		terminateImGui();
 
 		m_Renderer->Release();
-
-		m_Queue.release();
-		m_Device->Dispose();
 
 		m_Window->Terminate();
 	}
@@ -136,7 +90,7 @@ namespace dtr {
 
 		// Setup Platform/Renderer backends
 		ImGui_ImplGlfw_InitForOther(m_Window->GetNativeWindow(), true);
-		ImGui_ImplWGPU_Init(m_Device->GetNativeDevice(), 3, m_Renderer->GetSurfaceFormat());
+		ImGui_ImplWGPU_Init(m_Context->GetNativeDevice(), 3, m_Context->GetSurfaceFormat());
 		return true;
 	}
 

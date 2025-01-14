@@ -9,12 +9,12 @@ namespace dtr {
 
 	class GraphicsDevice {
 	private:
-		wgpu::Queue m_Queue;
 		wgpu::Device m_Device;
 
 	public:
-		bool Initialize(wgpu::Adapter adapter, GLFWwindow* window);
-		bool Dispose();
+		bool Initialize(wgpu::Adapter adapter);
+		void Release();
+
 		void InspectDevice();
 
 		inline wgpu::Device GetNativeDevice() { return m_Device; }

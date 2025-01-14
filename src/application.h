@@ -21,16 +21,9 @@ namespace dtr {
         static Application* m_Instance;
         bool m_IsRunning = false;
 
-        Window* m_Window;
     public:
-        GraphicsDevice* m_Device = nullptr;
-
-    private:
-        std::vector<WGPUFeatureName> m_Features;
-        wgpu::AdapterProperties m_Properties;
-
-        wgpu::Queue m_Queue;
-
+        Window* m_Window;
+        GraphicsContext* m_Context;
         Renderer* m_Renderer;
 
     public:

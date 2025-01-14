@@ -6,33 +6,13 @@
 namespace dtr
 {
 
-
-	void Renderer::Initialize(wgpu::Surface surface, wgpu::Adapter adapter)
+	void Renderer::Initialize()
 	{
-		m_Surface = surface; //TODO: Maybe call refrence? To inc ref counter
-
-		m_SurfaceFormat = wgpuSurfaceGetPreferredFormat(m_Surface, adapter);
-		if (m_SurfaceFormat == WGPUTextureFormat_Undefined) {
-			std::cerr << "Invalid surface format!" << "\n";
-			return;
-		}
-
-		wgpu::SurfaceConfiguration config = {};
-		config.setDefault();
-		config.width = 1280; //TODO: Maybe make some sort of graphicsContext object that stores everything regarding the drawing surface and window information
-		config.height = 720;
-		config.format = m_SurfaceFormat;
-		config.usage = WGPUTextureUsage_RenderAttachment;
-		config.device = Application::Get()->m_Device->GetNativeDevice();
-		config.presentMode = WGPUPresentMode_Fifo;
-		config.alphaMode = WGPUCompositeAlphaMode_Auto;
-
-		// Ensure surface configuration is applied before acquiring texture
-		m_Surface.configure(config);
+		m_Context = Application::Get()->m_Context;
 
 		//RENDERPIPELINE
-		Shader shader("assets/shaders/triangle.wgsl");
-		wgpu::ShaderModule shaderModule = shader.GetShaderModule(Application::Get()->m_Device->GetNativeDevice());
+		Shader shader("assets/shaders/triangle.wgsl");// TODO: Abstract away the shader stuff so the shader maybe has the uniform?
+		wgpu::ShaderModule shaderModule = shader.GetShaderModule();
 
 		//TODO: Vertex Attributes abstraheren
 		std::vector<wgpu::VertexAttribute> vertexAttribs(2);
@@ -79,7 +59,7 @@ namespace dtr
 		blendState.alpha.operation = wgpu::BlendOperation::Add;
 
 		wgpu::ColorTargetState colorTarget;
-		colorTarget.format = m_SurfaceFormat;
+		colorTarget.format = m_Context->GetSurfaceFormat();
 		colorTarget.blend = &blendState;
 		colorTarget.writeMask = wgpu::ColorWriteMask::All;
 
@@ -101,12 +81,12 @@ namespace dtr
 			pipelineLayoutDesc.bindGroupLayoutCount = 1;
 			pipelineLayoutDesc.bindGroupLayouts = m_UniformBuffer->GetLayout();
 
-			m_PipelineLayout = Application::Get()->m_Device->GetNativeDevice().createPipelineLayout(pipelineLayoutDesc);
+			m_PipelineLayout = m_Context->GetNativeDevice().createPipelineLayout(pipelineLayoutDesc);
 		}
 
 		pipelineDesc.layout = m_PipelineLayout;
 
-		m_RenderPipeline = Application::Get()->m_Device->GetNativeDevice().createRenderPipeline(pipelineDesc);
+		m_RenderPipeline = m_Context->GetNativeDevice().createRenderPipeline(pipelineDesc);
 	}
 
 	wgpu::RenderPassEncoder Renderer::RendererBegin()
@@ -118,7 +98,7 @@ namespace dtr
 		wgpu::CommandEncoderDescriptor encoderDesc = {};
 		encoderDesc.setDefault();
 		encoderDesc.label = "My command encoder";
-		m_CommandEncoder = Application::Get()->m_Device->GetNativeDevice().createCommandEncoder(encoderDesc);
+		m_CommandEncoder = m_Context->GetNativeDevice().createCommandEncoder(encoderDesc);
 			
 		wgpu::RenderPassColorAttachment renderPassColorAttachment = {};
 		renderPassColorAttachment.setDefault();
@@ -163,13 +143,14 @@ namespace dtr
 		wgpu::CommandBuffer command = m_CommandEncoder.finish(cmdBufferDescriptor);
 
 		m_CommandEncoder.release();
-		Application::Get()->m_Device->GetDeviceQueue().submit(1, &command);
+		m_Context->SubmitToQueue(&command, 1);
 
-		Application::Get()->m_Device->GetNativeDevice().poll(false);
+		m_Context->Poll();
 
 		//Release target view and present surface after
 		m_TargetView.release();
-		m_Surface.present();
+		
+		m_Context->Swap();
 	}
 
 	void Renderer::Release()
@@ -181,13 +162,7 @@ namespace dtr
 		m_RenderPipeline.release();
 		m_PipelineLayout.release();
 
-		m_Surface.unconfigure();
-		m_Surface.release();
-	}
-
-	wgpu::TextureFormat Renderer::GetSurfaceFormat()
-	{
-		return m_SurfaceFormat;
+		m_Context->Release();
 	}
 
 	void Renderer::initializeUniforms()
@@ -204,7 +179,7 @@ namespace dtr
 	wgpu::TextureView Renderer::getNextTextureView()
 	{
 		wgpu::SurfaceTexture surfaceTexture;
-		m_Surface.getCurrentTexture(&surfaceTexture);
+		m_Context->GetNativeSurface().getCurrentTexture(&surfaceTexture);
 		wgpu::Texture texture = surfaceTexture.texture;
 		if (surfaceTexture.status != wgpu::SurfaceGetCurrentTextureStatus::Success) {
 			std::cerr << "Failed getting current texture. status: " << surfaceTexture.status << "\n";

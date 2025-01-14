@@ -3,6 +3,7 @@
 
 #include <array>
 
+#include "graphicsContext.h"
 #include "buffer.h"
 
 namespace dtr
@@ -19,20 +20,20 @@ namespace dtr
 
 	class Renderer {
 	private:
+		GraphicsContext* m_Context;
+
 		wgpu::RenderPipeline m_RenderPipeline;
 		wgpu::PipelineLayout m_PipelineLayout;
 
 		UniformBuffer* m_UniformBuffer;
 
-		wgpu::Surface m_Surface;
-		wgpu::TextureFormat m_SurfaceFormat = wgpu::TextureFormat::Undefined;;
 		wgpu::TextureView m_TargetView;
 		wgpu::CommandEncoder m_CommandEncoder;
 
 	public:
-		void Initialize(wgpu::Surface surface, wgpu::Adapter adapter);
-
+		void Initialize();
 		void Release();
+
 
 		wgpu::RenderPassEncoder RendererBegin();
 		void RendererEnd(wgpu::RenderPassEncoder renderPass);

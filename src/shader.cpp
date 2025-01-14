@@ -5,6 +5,8 @@
 #include <fstream>
 #include <cassert>
 
+#include "application.h"
+
 namespace dtr {
 
 	Shader::Shader(const char* fileName)
@@ -34,7 +36,7 @@ namespace dtr {
 		return shaderSource.str();
 	}
 
-	wgpu::ShaderModule Shader::GetShaderModule(wgpu::Device device) const
+	wgpu::ShaderModule Shader::GetShaderModule() const
 	{
 		wgpu::ShaderModuleWGSLDescriptor shaderCodeDesc;
 		shaderCodeDesc.chain.next = nullptr;
@@ -46,7 +48,7 @@ namespace dtr {
 		shaderDesc.hints = nullptr;
 		shaderDesc.nextInChain = &shaderCodeDesc.chain;
 
-		return device.createShaderModule(shaderDesc);
+		return Application::Get()->m_Context->GetNativeDevice().createShaderModule(shaderDesc);
 	}
 
 }
