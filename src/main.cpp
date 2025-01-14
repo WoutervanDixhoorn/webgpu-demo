@@ -9,6 +9,8 @@
 #include "utility.h"
 #include "buffer.h"
 
+
+
 class SandboxApp : public dtr::Application
 {
 private:
@@ -37,6 +39,9 @@ public:
 	void Terminate() override
 	{
 		std::cout << "Terminate Application\n";
+
+		m_VertexBuffer->Release();
+		m_IndexBuffer->Release();
 	}
 
 	void OnGuiDraw() override

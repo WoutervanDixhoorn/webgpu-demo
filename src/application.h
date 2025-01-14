@@ -6,6 +6,7 @@
 #include "window.h"
 #include "buffer.h"
 #include "graphicsDevice.h"
+#include "renderer.h"
 
 namespace dtr {
     class Application {
@@ -28,16 +29,9 @@ namespace dtr {
         std::vector<WGPUFeatureName> m_Features;
         wgpu::AdapterProperties m_Properties;
 
-        wgpu::Surface m_WGPUSurface;
-        wgpu::TextureFormat m_SurfaceFormat = wgpu::TextureFormat::Undefined;
-
         wgpu::Queue m_Queue;
-        wgpu::PipelineLayout m_PipelineLayout;
-        wgpu::RenderPipeline m_Pipeline;
-        wgpu::BindGroupLayout m_BindGroupLayout;
-        wgpu::BindGroup m_BindGroup;
 
-        wgpu::Buffer m_UniformBuffer;
+        Renderer* m_Renderer;
 
     public:
         static Application* Get(){ 
